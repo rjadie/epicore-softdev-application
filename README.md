@@ -1,1 +1,3 @@
-# epicore-softdev-application
+# EPICORE Software Developer Application
+
+## Robert Adie | Portfolio Project
