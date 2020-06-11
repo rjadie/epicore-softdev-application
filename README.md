@@ -6,13 +6,15 @@
 
 This portfolio project outlines one possible version of an information system that could be used to support an epidemiologic study conducted in collaboration with the EPICORE Centre. The research study used as the business case for this system is ["The Effectiveness of Pharmacist Intervention on Cardiovascular Risk: The Multicenter Randomized Controlled RxEACH Trial"](https://www.onlinejacc.org/content/67/24/2846) by Ross T. Tsuyuki, Yazid N. Al Hamarneh, Charlotte A. Jones, and Brenda R. Hemmelgarn.
 
-Included in this project are the following:
+Included in this project are the following sections:
 
-1. A description of the database schema, including a ERD, Data Dictionary, DDL script for building the database, and script for inserting test data.
+1. A description of the database schema, including a ERD (Entity Relationship Diagram), Data Dictionary, and DDL (Data Definition Language) script for building the database and inserting test data.
 
-2. A Web API project built in .NET Framework to allow for several basic CRUD (Create, Read, Update, Delete) use cases; included in this section are code examples and screenshots of the API functionality being tested using Postman. 
+2. A RESTful (Representational State Transfer) API project built with .NET Framework to allow for several basic CRUD (primarily Create & Read) use cases; included in this section are code excerpts code and examples of successful responses to API calls with all testing using the Postman API testing application.
 
-## Database Schema Development
+3. A brief discussion pointing out some limitations with the project.
+
+## Part 1: Database Schema Development
 
 ### Entity Relationship Diagram
 
@@ -132,10 +134,317 @@ Table Name/Row | Column Name | Constraints | Datatype | Notes
 
 The Data Definition Language (DDL) SQL script related to implementing the aforementioned schema (and inputting static test data based upon it) can be found in the db-files folder of the repository.
 
+## RESTful API Service
+
+### Project Structure
+
+The API can be found in a zipped folder within the api-project folder. The project is a Visual Studio 2019 solution file with 3 projects: a .NET Framework Web API project called WebAPI, a class library containing data objects used throughout the project called WebAPI.Model, and a class library containing data access-related objects called WebAPI.DataAccess.
+
+Firstly, the WebAPI project contains the controller classes that set the API URL parameters and enforce business logic. Secondly, the WebAPI.Model project contains an APIResponse object that is used to return custom API response parameters with each API call, a Models folder with all database model classes (derived from the database using Entity Framework), and a ViewModels folder with all custom data objects (including POCOs and DTOs) used within the API calls themselves. Finally, the WebAPI.DataAccess project contains the DAL (Data Access Layer) folder with the context class (necessary to make calls to the database), the Handlers folder (with classes to further enforce business logic), and the DBTasks class, which is responsible for interacting with the database directly through LINQ queries.
+
+The project structure can be summarized as follows:
+- Controller classes make calls to handler methods; 
+- Handler methods make calls to DBTasks; and
+- DBTasks interact with the database.
+
+Following will show some excerpts of the code used to interact with the database, with an emphasis on Create and Read (i.e., Post and Get) methods.
+
+### Project Excerpt: Create (Post)
+
+- The create method is called as an asynchronous task to optimize software performance.
+- There is 1 read method (GetPatientParams()) that returns the parameters necessary for a user to create a Patient record (all of the pharmacist and ethnicity information to fill out the relevant drop down menus).
+- The following controller method is called by the API:
+
+        APIResponse<PostResponseVM> response = new APIResponse<PostResponseVM>();
+
+        PatientsHandler handler = new PatientsHandler();
+        response = await handler.AddPatient(newPatient);
+
+        return Ok(response);
+
+- The following is the handler method called by the controller:
+
+        APIResponse<PostResponseVM> response = new APIResponse<PostResponseVM>();
+        try
+        {
+            DBTasks tasks = new DBTasks();
+            response = await tasks.AddPatient(newPatient);
+        }
+        catch (Exception ex)
+        {
+            response.Messages.Add(new Message()
+            {
+                MessageCode = "AP001",
+                MessageSeverity = MessageSeverity.Error,
+                MessageText = ex.InnerException.Message
+            });
+        }
+
+        return response;
+
+- Finally, the following is the DBTasks method called by the handler (including LINQ queries):
+
+        APIResponse<PostResponseVM> response = new APIResponse<PostResponseVM>();
+
+        using (var context = new EPPContext())
+        {
+            Patient patientToAdd = new Patient();
+
+            var validPharmIds = (from pharms in context.Pharmacists
+                                    select pharms.PharmacistID).ToList();
+
+            if (!validPharmIds.Contains(newPatient.PharmacistID))
+            {
+                response.Messages.Add(new Message()
+                {
+                    MessageCode = "AP001",
+                    MessageSeverity = MessageSeverity.Error,
+                    MessageText = "Please submit a valid pharmacist id to add a patient."
+                });
+            }
+            else
+            {
+                patientToAdd.PharmacistID = newPatient.PharmacistID;
+            }
+
+            var validEthnicityIds = (from ethns in context.EthnicityTypes
+                                        select ethns.EthnicityTypeID).ToList();
+
+            if (!validEthnicityIds.Contains(newPatient.EthnicityTypeID))
+            {
+                response.Messages.Add(new Message()
+                {
+                    MessageCode = "AP002",
+                    MessageSeverity = MessageSeverity.Error,
+                    MessageText = "Please submit a valid ethnicity id to add a patient."
+                });
+            }
+            else
+            {
+                patientToAdd.EthnicityTypeID = newPatient.EthnicityTypeID;
+            }
+
+            if (response.Messages.Count() == 0)
+            {
+                patientToAdd.FirstName = newPatient.FirstName;
+                patientToAdd.LastName = newPatient.LastName;
+                patientToAdd.Age = newPatient.Age;
+                patientToAdd.Gender = newPatient.Gender;
+                patientToAdd.PhysicianIsInformed = newPatient.PhysicianIsInformed;
+
+                context.Patients.Add(newPatient);
+                await context.SaveChangesAsync();
+
+                PostResponseVM responseObj = new PostResponseVM
+                {
+                    NewRecordId = newPatient.PatientID,
+                    ResponseMessage = "Patient added successfully."
+                };
+
+                response.Response = responseObj;
+            }
+            
+        }
+
+        return response;
+
+- To create a record, submit the following URL and JSON data (within the request body) respectively:
+
+        http://localhost:51368/api/addpatient
+
+        {
+            "PharmacistID": "1",
+            "EthnicityTypeID": "1",
+            "FirstName": "Bill",
+            "LastName": "Patient",
+            "Age": "67",
+            "Gender": "Male",
+            "PhysicianIsInformed": "true"
+        }
+
+- If successful, the following JSON object will be returned:
+
+        {
+            "Messages": [],
+            "ApiVersionNumber": "1.0.0.0",
+            "Response": {
+                "NewRecordId": 9,
+                "ResponseMessage": "Patient added successfully."
+            },
+            "IsSuccess": true
+        }
+
+### Project Excerpt: Read (Get)
+
+- This read operation returns a List\<T\> where T is a custom PatientVM object.
+- The Get controller class contains the following:
+
+        APIResponse<List<PatientVM>> response = new APIResponse<List<PatientVM>>();
+            
+        PatientsHandler handler = new PatientsHandler();
+        response = handler.GetPatients();
+
+        return Ok(response);
+
+- The handler method called above contains the following:
+
+        APIResponse<List<PatientVM>> response = new APIResponse<List<PatientVM>>();
+        try
+        {
+            DBTasks tasks = new DBTasks();
+            response = tasks.GetPatients();
+        }
+        catch (Exception ex)
+        {
+            response.Messages.Add(new Message()
+            {
+                MessageCode = "GP001",
+                MessageSeverity = MessageSeverity.Error,
+                MessageText = ex.InnerException.Message
+            });
+        }
+
+        return response;
+
+- And finally, the DBTasks method called above contains the following:
+
+        APIResponse<List<PatientVM>> response = new APIResponse<List<PatientVM>>();
+        using (var context = new EPPContext())
+        {
+            var patients = (from patient in context.Patients
+                            select new PatientVM
+                            {
+                                FirstName = patient.FirstName,
+                                LastName = patient.LastName,
+                                Age = patient.Age,
+                                Gender = patient.Gender,
+                                PhysicianIsInformed = patient.PhysicianIsInformed,
+                                Ethnicity = (from ethnicity in context.EthnicityTypes
+                                            where ethnicity.EthnicityTypeID == patient.EthnicityTypeID
+                                            select ethnicity.EthnicityTypeDescription).FirstOrDefault(),
+                                Pharmacist = (from pharmacist in context.Pharmacists
+                                                where pharmacist.PharmacistID == patient.PharmacistID
+                                                select pharmacist.LastName + ", " + pharmacist.FirstName).FirstOrDefault()
+                            }).ToList();
+
+            if (patients == null || patients.Count() == 0)
+            {
+                response.Messages.Add(new Message()
+                {
+                    MessageCode = "GP001",
+                    MessageSeverity = MessageSeverity.Warning,
+                    MessageText = "Sorry, there are no patients to display."
+                });
+            }
+            else
+            {
+                response.Response = patients;
+            }
+        }
+
+        return response;
+
+- To submit the request, enter the following URL:
+
+        http://localhost:51368/api/getpatients
+
+- If successful, the following JSON data will be returned:
+
+        {
+            "Messages": [],
+            "ApiVersionNumber": "1.0.0.0",
+            "Response": [
+                {
+                    "FirstName": "Joe",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Male",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Bob",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Male",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Frank",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Male",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Jack",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Male",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Liz",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Female",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Fran",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Female",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Gerty",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Female",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Barb",
+                    "LastName": "Patient",
+                    "Age": 65,
+                    "Gender": "Female",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                },
+                {
+                    "FirstName": "Bill",
+                    "LastName": "Patient",
+                    "Age": 67,
+                    "Gender": "Male",
+                    "PhysicianIsInformed": true,
+                    "Ethnicity": "Caucasian/Other",
+                    "Pharmacist": "One, Pharmacist"
+                }
+            ],
+            "IsSuccess": true
+        }
+
 ## Project Limitations
 
-1. Due to time constraints, the development of the database was prioritized, followed by the server-side API that would be used to make alterations to the database while enforcing business logic. A client-side portion of the application was desired but deemed less of a priority due to the emphasis of .NET and SQL in the job description.
+1. Due to time constraints, Update and Delete (Put and Delete) methods were ommitted, as well as a client-facing application. I emphasized these portions of the project due to their relative importance in my opinion, as well as their greater relevance to the job description.
 
-2. The formatting for the data dictionary table is push row lines beyond the table limits; this may be due to the use of HTML directly to consolidated cells within rows and does not appear to have a direct fix other than converting to a different markdown format.
+2. In the patient assessment table, many of the measurements only have units specified in the data dictionary notes. If multiple measurement types were to be used it would be advisable to abstract all values (for example, waist circumference, height, weight, etc.) into their own tables that would allow for heigh in cm or height in inches to be associated with a record.
 
-3. In the patient assessment table, many of the measurements only have units specified in the data dictionary notes. If multiple measurement types were to be used it would be advisable to abstract all values (for example, waist circumference, height, weight, etc.) into their own tables that would allow for heigh in cm or height in inches to be associated with a record. 
+## Conclusions
+
+I'm extremely excited by the important work the EPICORE Centre is doing to help enable pharmacists play a more pronounced role in treating CVD and other terrible diseases and I would love to be a part of that work in any way that I could. Thanks very much for reading this project portfolio summary and I look forward to hearing from you soon.
