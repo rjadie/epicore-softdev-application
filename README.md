@@ -10,9 +10,9 @@ Included in this project are the following sections:
 
 1. A description of the database schema, including a ERD (Entity Relationship Diagram), Data Dictionary, and DDL (Data Definition Language) script for building the database and inserting test data.
 
-2. A RESTful (Representational State Transfer) API project built with .NET Framework to allow for several basic CRUD (primarily Create & Read) use cases; included in this section are code excerpts code and examples of successful responses to API calls with all testing using the Postman API testing application.
+2. A RESTful (Representational State Transfer) API project built with .NET Framework to allow for several basic CRUD (primarily Create & Read) use cases; included in this section are code excerpts and examples of successful responses to API calls. All testing is done using the Postman API testing application.
 
-3. A brief discussion pointing out some limitations with the project.
+3. A brief discussion of the project.
 
 ## Part 1: Database Schema Development
 
@@ -138,16 +138,16 @@ The Data Definition Language (DDL) SQL script related to implementing the aforem
 
 ### Project Structure
 
-The API can be found in a zipped folder within the api-project folder. The project is a Visual Studio 2019 solution file with 3 projects: a .NET Framework Web API project called WebAPI, a class library containing data objects used throughout the project called WebAPI.Model, and a class library containing data access-related objects called WebAPI.DataAccess.
+The API application can be found in the api-project folder. It contains a Visual Studio 2019 solution file with 3 embedded projects: a .NET Framework Web API project called WebAPI, a class library containing data objects used throughout the project called WebAPI.Model, and a class library containing data access-related objects called WebAPI.DataAccess.
 
-Firstly, the WebAPI project contains the controller classes that set the API URL parameters and enforce business logic. Secondly, the WebAPI.Model project contains an APIResponse object that is used to return custom API response parameters with each API call, a Models folder with all database model classes (derived from the database using Entity Framework), and a ViewModels folder with all custom data objects (including POCOs and DTOs) used within the API calls themselves. Finally, the WebAPI.DataAccess project contains the DAL (Data Access Layer) folder with the context class (necessary to make calls to the database), the Handlers folder (with classes to further enforce business logic), and the DBTasks class, which is responsible for interacting with the database directly through LINQ queries.
+Firstly, the WebAPI project contains the controller classes that set the API URL parameters and enforce business logic. Secondly, the WebAPI.Model project contains an APIResponse object that is used to return custom API response parameters with each API call, a Models folder with all database model classes (derived from the database using Entity Framework), and a ViewModels folder with all custom data objects (including POCOs and DTOs) used within the API calls themselves. Finally, the WebAPI.DataAccess project contains the DAL (Data Access Layer) folder with a context class (necessary to make calls to the database), the Handlers folder with a class to act as an intermediary between the controller and database operations, and the DBTasks class, which is responsible for interacting with the database directly through LINQ queries.
 
 The project structure can be summarized as follows:
 - Controller classes make calls to handler methods; 
-- Handler methods make calls to DBTasks; and
-- DBTasks interact with the database.
+- Handler methods make calls to DBTasks methods; and
+- DBTasks methods interact with the database.
 
-Following will show some excerpts of the code used to interact with the database, with an emphasis on Create and Read (i.e., Post and Get) methods.
+The following will show some excerpts of the code used to interact with the database, with an emphasis on Create and Read (i.e., Post and Get) methods to allow for brevity.
 
 ### Project Excerpt: Create (Post)
 
@@ -262,7 +262,7 @@ Following will show some excerpts of the code used to interact with the database
             "PhysicianIsInformed": "true"
         }
 
-- If successful, the following JSON object will be returned:
+- If successful, the following custom JSON object will be returned (derived from the APIResponse class):
 
         {
             "Messages": [],
@@ -348,7 +348,7 @@ Following will show some excerpts of the code used to interact with the database
 
         http://localhost:51368/api/getpatients
 
-- If successful, the following JSON data will be returned:
+- If successful, the following JSON data will be returned (again, from the custom APIResponse object):
 
         {
             "Messages": [],
@@ -441,10 +441,10 @@ Following will show some excerpts of the code used to interact with the database
 
 ## Project Limitations
 
-1. Due to time constraints, Update and Delete (Put and Delete) methods were ommitted, as well as a client-facing application. I emphasized these portions of the project due to their relative importance in my opinion, as well as their greater relevance to the job description.
+1. Due to time constraints, a client-facing application and all requisite Update and Delete (Put and Delete) methods were ommitted. I emphasized the Get, Post, and database schema/DDL portions of the project due to their relative importance, as well as their greater relevance to the job description.
 
-2. In the patient assessment table, many of the measurements only have units specified in the data dictionary notes. If multiple measurement types were to be used it would be advisable to abstract all values (for example, waist circumference, height, weight, etc.) into their own tables that would allow for heigh in cm or height in inches to be associated with a record.
+2. In the patient assessment table, many of the measurements only have units specified in the data dictionary notes. If multiple measurement types were to be used, it would be advisable to abstract all values (for example, waist circumference, height, weight, etc.) into their own tables so as to allow for metric and US Customary variance (e.g., height in cm or inches).
 
 ## Conclusions
 
-I'm extremely excited by the important work the EPICORE Centre is doing to help enable pharmacists play a more pronounced role in treating CVD and other terrible diseases and I would love to be a part of that work in any way that I could. Thanks very much for reading this project portfolio summary and I look forward to hearing from you soon.
+I'm extremely excited by the important work the EPICORE Centre is doing, both to help enable pharmacists to play a more pronounced role in treating chronic disease and doing vital pharmaceutical research more broadly. I would love to be a part of your work in any way that I can and I really appreciate you taking the time to speak with me. Thanks very much for reading this project portfolio summary and I look forward to hearing from you soon.
