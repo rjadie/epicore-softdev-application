@@ -444,7 +444,3 @@ The following will show some excerpts of the code used to interact with the data
 1. Due to time constraints, a client-facing application and all requisite Update and Delete (Put and Delete) methods were ommitted. I emphasized the Get, Post, and database schema/DDL portions of the project due to their relative importance, as well as their greater relevance to the job description.
 
 2. In the patient assessment table, many of the measurements only have units specified in the data dictionary notes. If multiple measurement types were to be used, it would be advisable to abstract all values (for example, waist circumference, height, weight, etc.) into their own tables so as to allow for metric and US Customary variance (e.g., height in cm or inches).
-
-## Conclusions
-
-I'm extremely excited by the important work the EPICORE Centre is doing, both to help enable pharmacists to play a more pronounced role in treating chronic disease and doing vital pharmaceutical research more broadly. I would love to be a part of your work in any way that I can and I really appreciate you taking the time to speak with me. Thanks very much for reading this project portfolio summary and I look forward to hearing from you soon.
