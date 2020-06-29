@@ -1,4 +1,4 @@
-# Portfolio Piece - EPICORE Centre Epidemiologic Study
+# EPICORE Centre Epidemiologic Study System
 
 ## Robert Adie | Portfolio Project
 
